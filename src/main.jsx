@@ -1,21 +1,22 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import {
-  BookOpen, Box, Eraser, LayoutGrid, PackageOpen, PenLine, PenTool, Ruler, Search, ShoppingBag,
+  BookOpen, Box, Eraser, Highlighter, LayoutGrid, PackageOpen, Pencil, PenLine, Plus, Ruler, Search, ShoppingBag, Trash2,
 } from 'lucide-react'
-import { exampleProducts, formatPrice } from './products'
+import { changeProducts, formatPrice, readProducts, saveProducts } from './products'
+import ProductDialog from './ProductDialog'
 import './style.css'
 
-const productArt = {
-  pulpen: [PenLine, 'peach'],
-  'buku tulis': [BookOpen, 'green'],
-  spidol: [PenTool, 'lilac'],
-  penggaris: [Ruler, 'sand'],
-  penghapus: [Eraser, 'rose'],
-}
+const productArt = new Map([
+  ['pulpen', [PenLine, 'peach']],
+  ['buku tulis', [BookOpen, 'green']],
+  ['spidol', [Highlighter, 'lilac']],
+  ['penggaris', [Ruler, 'sand']],
+  ['penghapus', [Eraser, 'rose']],
+])
 
-function ProductCard({ product }) {
-  const [Illustration, tone] = productArt[product.name.toLowerCase()] ?? [Box, 'peach']
+function ProductCard({ product, onEdit, onDelete }) {
+  const [Illustration, tone] = productArt.get(product.name.toLowerCase()) ?? [Box, 'peach']
 
   return (
     <li className="product">
@@ -27,13 +28,53 @@ function ProductCard({ product }) {
         <h3>{product.name}</h3>
         <p className="price">{formatPrice(product.price)}</p>
       </div>
+      <div className="product-actions">
+        <button className="button secondary" aria-label={'Edit ' + product.name} onClick={onEdit}>
+          <Pencil size={13} aria-hidden="true" /> Edit
+        </button>
+        <button className="button delete" aria-label={'Hapus ' + product.name} onClick={onDelete}>
+          <Trash2 size={13} aria-hidden="true" /> Hapus
+        </button>
+      </div>
     </li>
   )
 }
 
+function loadCatalog() {
+  try {
+    return { products: readProducts(window.localStorage), error: '' }
+  } catch {
+    return { products: [], error: 'Katalog tidak bisa dibaca. Periksa penyimpanan browser.' }
+  }
+}
+
 function App() {
-  const products = exampleProducts
+  const [{ products, error }, setCatalog] = useState(loadCatalog)
   const [query, setQuery] = useState('')
+  const [editor, setEditor] = useState(null)
+  const [notice, setNotice] = useState('')
+  const addButton = useRef(null)
+
+  function openEditor(action, product) {
+    setNotice('')
+    setEditor({ action, product })
+  }
+
+  function saveProduct(action, id, details) {
+    const storage = window.localStorage
+    const next = changeProducts(readProducts(storage), action, id, details)
+    saveProducts(storage, next)
+    setCatalog({ products: next, error: '' })
+
+    if (action === 'delete') {
+      setNotice('Produk berhasil dihapus.')
+    } else if (action === 'edit') {
+      setNotice('Perubahan produk tersimpan.')
+    } else {
+      setQuery('')
+      setNotice('Produk berhasil ditambahkan.')
+    }
+  }
 
   const term = query.trim().toLowerCase()
   const visible = products.filter((product) => product.name.toLowerCase().includes(term))
@@ -69,21 +110,32 @@ function App() {
           <div className="catalog-header">
             <div>
               <h2 id="catalog-title">Daftar Produk</h2>
-              <p aria-live="polite">{`${products.length} produk di katalog`}</p>
+              <p aria-live="polite">{error ? 'Katalog produk' : `${products.length} produk di katalog`}</p>
             </div>
+            <button ref={addButton} className="button add" disabled={Boolean(error)}
+              onClick={() => openEditor('add')}><Plus size={17} aria-hidden="true" /> Tambah Produk</button>
           </div>
 
-          {visible.length ? (
+          <p className={notice ? 'notice' : undefined} role="status">{notice}</p>
+          {error ? <p className="empty" role="alert">{error}</p> : visible.length ? (
             <ul className="product-grid">
-              {visible.map((product) => <ProductCard key={product.id} product={product} />)}
+              {visible.map((product) => <ProductCard key={product.id} product={product}
+                onEdit={() => openEditor('edit', product)} onDelete={() => openEditor('delete', product)} />)}
             </ul>
           ) : <p className="empty" role="status">{term ? 'Produk yang kamu cari tidak ditemukan.' : 'Belum ada produk di katalog.'}</p>}
 
-          <p className="results" aria-live="polite">
+          {!error && <p className="results" aria-live="polite">
             Menampilkan {visible.length} dari {products.length} produk
-          </p>
+          </p>}
         </section>
       </main>
+
+      {editor && <ProductDialog editor={editor} onSave={saveProduct} onClose={() => {
+        if (document.activeElement === document.body) {
+          addButton.current.focus()
+        }
+        setEditor(null)
+      }} />}
     </>
   )
 }

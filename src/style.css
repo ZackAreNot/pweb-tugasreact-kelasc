@@ -74,7 +74,6 @@ h1, h2, h3, p { margin: 0; }
 .price { margin-top: 6px; color: var(--orange); font-size: 1.125rem; font-weight: 800; }
 .results { border-top: 1px solid var(--line); padding-top: 14px; margin-top: 18px; }
 .empty { background: #faf7f4; border-radius: 10px; padding: 28px 15px; text-align: center; color: var(--muted); }
-.empty .button { margin-top: 12px; }
 .button { border: 1px solid var(--orange); border-radius: 6px; background: var(--orange); color: #fff; padding: 9px 13px; font-size: .875rem; font-weight: 700; }
 .button:hover:not(:disabled) { background: var(--orange-dark); }
 
