@@ -10,5 +10,9 @@ export default defineConfig(({ mode }) => {
       rewrite: (path) => path.replace(/^\/api/, ''),
     },
   }
-  return { plugins: [react(), tailwindcss()], server: { proxy }, preview: { proxy } }
+  return {
+    plugins: [react(), tailwindcss()],
+    server: { proxy },
+    preview: { proxy },
+  }
 })
